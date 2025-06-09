@@ -30,6 +30,7 @@ import dev.sunbirdrc.registry.sink.DatabaseProvider;
 import dev.sunbirdrc.registry.sink.OSGraph;
 import dev.sunbirdrc.registry.sink.shard.Shard;
 import dev.sunbirdrc.registry.util.*;
+import dev.sunbirdrc.registry.helper.RegistryHelper;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Transaction;
@@ -48,7 +49,7 @@ import org.sunbird.akka.core.Router;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-
+import static dev.sunbirdrc.registry.middleware.util.Constants.*;
 import static dev.sunbirdrc.registry.Constants.*;
 import static dev.sunbirdrc.registry.exception.ErrorMessages.INVALID_ID_MESSAGE;
 
@@ -132,6 +133,9 @@ public class RegistryServiceImpl implements RegistryService {
     @Autowired
     private SchemaService schemaService;
 
+    @Autowired
+    private RegistryHelper registryHelper;
+
     @Autowired(required = false)
     private IIdGenService idGenService;
     @Value("${idgen.enabled:false}")
@@ -187,6 +191,7 @@ public class RegistryServiceImpl implements RegistryService {
             }
         }
     }
+    @Override
     public void maskAndEmitEvent(JsonNode deletedNode, String index, EventType delete, String userId, String uuid) throws JsonProcessingException {
         JsonNode maskedNode = entityTransformer.updatePrivateAndInternalFields(
                 deletedNode,
@@ -577,6 +582,47 @@ public class RegistryServiceImpl implements RegistryService {
             JSONUtil.merge(entityType, result, (ObjectNode) prop.getValue(), ignoredProps);
         });
         return result;
+    }
+
+    @Override
+    public boolean exists(String entityType, Map<String, String> conditions) throws Exception {
+        ObjectNode searchNode = JsonNodeFactory.instance.objectNode();
+        ArrayNode entityArray = JsonNodeFactory.instance.arrayNode();
+        entityArray.add(entityType);
+        searchNode.set(ENTITY_TYPE, entityArray);
+        
+        ObjectNode filters = JsonNodeFactory.instance.objectNode();
+        conditions.forEach((key, value) -> filters.put(key, value));
+        searchNode.set(FILTERS, filters);
+
+        JsonNode result = registryHelper.searchEntity(searchNode, null);
+        return result != null && result.has(entityType) && 
+               result.get(entityType).has(ENTITY_LIST) &&
+               result.get(entityType).get(ENTITY_LIST).size() > 0;
+    }
+
+    @Override
+    public boolean isUnique(String entityType, Map<String, String> conditions) throws Exception {
+        ObjectNode searchNode = JsonNodeFactory.instance.objectNode();
+        ArrayNode entityArray = JsonNodeFactory.instance.arrayNode();
+        entityArray.add(entityType);
+        searchNode.set(ENTITY_TYPE, entityArray);
+        
+        ObjectNode filters = JsonNodeFactory.instance.objectNode();
+        conditions.forEach((key, value) -> filters.put(key, value));
+        searchNode.set(FILTERS, filters);
+
+        JsonNode result = registryHelper.searchEntity(searchNode, null);
+        return result != null && result.has(entityType) && 
+               result.get(entityType).has(ENTITY_LIST) &&
+               result.get(entityType).get(ENTITY_LIST).size() == 0;
+    }
+
+    @Override
+    public boolean exists(String entityType, String field, String value) throws Exception {
+        Map<String, String> conditions = new HashMap<>();
+        conditions.put(field, value);
+        return exists(entityType, conditions);
     }
 
 }

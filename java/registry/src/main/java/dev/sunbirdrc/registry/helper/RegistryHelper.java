@@ -77,6 +77,8 @@ import static dev.sunbirdrc.pojos.attestation.Action.GRANT_CLAIM;
 import static dev.sunbirdrc.registry.Constants.*;
 import static dev.sunbirdrc.registry.exception.ErrorMessages.*;
 import static dev.sunbirdrc.registry.middleware.util.Constants.*;
+import static dev.sunbirdrc.registry.middleware.util.Constants.LIMIT;
+import static dev.sunbirdrc.registry.middleware.util.Constants.OFFSET;
 import static dev.sunbirdrc.registry.middleware.util.OSSystemFields.*;
 
 /**
@@ -1286,7 +1288,7 @@ public class RegistryHelper {
     }
 
     public boolean doesEntityOperationRequireAuthorization(String entity) {
-        return securityEnabled && !getManageRoles(entity).contains("anonymous") && (doesEntityContainOwnershipAttributes(entity) || getManageRoles(entity).size() > 0);
+        return securityEnabled && !getManageRoles(entity).contains(ROLE_ANONYMOUS) && (doesEntityContainOwnershipAttributes(entity) || getManageRoles(entity).size() > 0);
     }
 
     boolean hasAttestationPropertiesChanged(JsonNode updatedNode, JsonNode existingNode, AttestationPolicy attestationPolicy, String entityName) {
@@ -1355,7 +1357,12 @@ public class RegistryHelper {
                 JsonNodeFactory.instance.objectNode().set(SIGNED_HASH,
                         JsonNodeFactory.instance.objectNode().put("eq", generateHash(signedData))));
         JsonNode searchResponse = searchEntity(searchNode, userId);
-        return searchResponse.get(REVOKED_CREDENTIAL) != null && !searchResponse.get(REVOKED_CREDENTIAL).get(ENTITY_LIST).isEmpty();
+        JsonNode revokedCredentialNode = searchResponse.get(REVOKED_CREDENTIAL);
+        if (revokedCredentialNode == null) {
+            return false;
+        }
+        JsonNode entityList = revokedCredentialNode.get(ENTITY_LIST);
+        return entityList != null && !entityList.isEmpty();
     }
 
     public static ResponseEntity<Object> ServiceNotEnabledResponse(String message, Response response, ResponseParams responseParams) {

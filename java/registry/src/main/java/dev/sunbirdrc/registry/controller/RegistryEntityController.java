@@ -52,9 +52,9 @@ import javax.ws.rs.BadRequestException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
+import static dev.sunbirdrc.registry.middleware.util.Constants.*;
 import static dev.sunbirdrc.registry.Constants.*;
 import static dev.sunbirdrc.registry.helper.RegistryHelper.ServiceNotEnabledResponse;
-import static dev.sunbirdrc.registry.middleware.util.Constants.*;
 
 @RestController
 public class RegistryEntityController extends AbstractController {

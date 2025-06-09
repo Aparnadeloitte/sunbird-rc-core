@@ -28,6 +28,7 @@ import dev.sunbirdrc.views.FunctionExecutor;
 import dev.sunbirdrc.workflow.KieConfiguration;
 import dev.sunbirdrc.workflow.RuleEngineService;
 import org.apache.commons.io.IOUtils;
+import org.springframework.util.DigestUtils;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Before;
@@ -135,6 +136,7 @@ public class RegistryHelperTest {
 		registryHelper.setDefinitionsManager(definitionsManager);
 		registryHelper.setNotificationEnabled(true);
 		registryHelper.setSecurityEnabled(true);
+		ReflectionTestUtils.setField(registryHelper, "searchService", searchService);
 	}
 
 	@Test
@@ -801,12 +803,16 @@ public class RegistryHelperTest {
 
 	@Test
 	public void shouldReturnTrueIFSignedDataIsRevoked() throws Exception {
+		String signedData = "xyz";
+		String hash = DigestUtils.md5DigestAsHex(signedData.getBytes()).toUpperCase();
 		JsonNode searchResponse = JsonNodeFactory.instance.objectNode()
 				.set(REVOKED_CREDENTIAL, JsonNodeFactory.instance.objectNode()
-								.set(ENTITY_LIST, JsonNodeFactory.instance.arrayNode()
-										.add(JsonNodeFactory.instance.objectNode().put("signedData", "xyz"))));
+						.set(ENTITY_LIST, JsonNodeFactory.instance.arrayNode()
+								.add(JsonNodeFactory.instance.objectNode()
+										.put("signedHash", hash)
+										.put("osid", "123"))));
 		when(searchService.search(any(), anyString())).thenReturn(searchResponse);
-		assertTrue(registryHelper.checkIfCredentialIsRevoked("signedData", ""));
+		assertTrue(registryHelper.checkIfCredentialIsRevoked(signedData, ""));
 	}
 
 	@Test
