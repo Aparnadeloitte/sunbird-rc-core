@@ -11,6 +11,7 @@ import org.everit.json.schema.loader.SchemaLoader;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,6 +29,9 @@ public class JsonValidationServiceImpl implements IValidate {
 	private Map<String, Schema> entitySchemaMap = new HashMap<>();
 	private Map<String, String> definitionMap = new HashMap<>();;
 	private final String schemaUrl;
+
+	@Autowired
+	private XValidationService xValidationService;
 
 	private final ObjectMapper objectMapper;
 
@@ -68,6 +72,24 @@ public class JsonValidationServiceImpl implements IValidate {
 			JSONObject obj = new JSONObject(objString);
 			try {
 				schema.validate(obj); // throws a ValidationException if this object is invalid
+				try {
+					String definitionContent = definitionMap.get(entityType);
+					if (definitionContent != null) {
+						JSONObject fullSchemaNode = new JSONObject(definitionContent);
+						JSONObject fullDataNode = new JSONObject(objString);
+
+						logger.info("SchemaNode for {}: {}", entityType, fullSchemaNode.toString());
+						logger.info("DataNode for {}: {}", entityType, fullDataNode.toString());
+
+						// Get the inner object for validation if wrapped
+						JSONObject actualDataNode = fullDataNode.has(entityType) ? fullDataNode.getJSONObject(entityType) : fullDataNode;
+
+						// Pass full schema node (with _osConfig) for rule access
+						xValidationService.validate(schema, actualDataNode);
+					}
+				} catch (Exception e) {
+					throw new RuntimeException("Error during x-validation: " + e.getMessage(), e);
+				}
 			} catch (ValidationException e) {
 				logger.error("Validation Exception : " + e.getAllMessages());
 				if (ignoreRequiredFields) {
