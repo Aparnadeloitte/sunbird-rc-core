@@ -5,6 +5,10 @@ import dev.sunbirdrc.registry.middleware.MiddlewareHaltException;
 import dev.sunbirdrc.pojos.RegistryLookup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.json.JSONObject;
+import org.everit.json.schema.Schema;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.everit.json.schema.loader.SchemaLoader;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -13,29 +17,32 @@ import java.util.Map;
 public class XValidationService {
     private static final Logger logger = LoggerFactory.getLogger(XValidationService.class);
     private final RegistryLookup registryLookup;
+    private final ObjectMapper objectMapper;
 
     public XValidationService(RegistryLookup registryLookup) {
         this.registryLookup = registryLookup;
+        this.objectMapper = new ObjectMapper();
     }
 
-    public void validate(JsonNode schemaNode, JsonNode dataNode) throws MiddlewareHaltException {
-        if (!schemaNode.has("x-validation")) {
+    public void validate(Schema schema, JSONObject data) throws MiddlewareHaltException {
+        // Get the raw schema JSON from the Schema object
+        JSONObject schemaJson = new JSONObject(schema.toString());
+        if (!schemaJson.has("x-validation")) {
             return;
         }
 
-        JsonNode xValidationNode = schemaNode.get("x-validation");
-        Iterator<Map.Entry<String, JsonNode>> rules = xValidationNode.fields();
+        JSONObject xValidationNode = schemaJson.getJSONObject("x-validation");
+        Iterator<String> keys = xValidationNode.keys();
 
-        while (rules.hasNext()) {
-            Map.Entry<String, JsonNode> rule = rules.next();
-            String ruleName = rule.getKey();
-            JsonNode ruleNode = rule.getValue();
+        while (keys.hasNext()) {
+            String ruleName = keys.next();
+            JSONObject ruleNode = xValidationNode.getJSONObject(ruleName);
 
-            String ruleExpression = ruleNode.get("rule").asText();
-            String description = ruleNode.has("description") ? ruleNode.get("description").asText() : "";
+            String ruleExpression = ruleNode.getString("rule");
+            String description = ruleNode.has("description") ? ruleNode.getString("description") : "";
 
             try {
-                if (!validateRule(ruleExpression, dataNode)) {
+                if (!validateRule(ruleExpression, data)) {
                     throw new MiddlewareHaltException(String.format("X-Validation failed for rule '%s': %s", ruleName, description));
                 }
             } catch (Exception e) {
@@ -45,17 +52,17 @@ public class XValidationService {
         }
     }
 
-    private boolean validateRule(String ruleExpression, JsonNode dataNode) throws Exception {
+    private boolean validateRule(String ruleExpression, JSONObject data) throws Exception {
         if (ruleExpression.contains("existsInRegistry")) {
-            return validateRegistryExistence(ruleExpression, dataNode);
+            return validateRegistryExistence(ruleExpression, data);
         } else if (ruleExpression.contains("isUniqueInRegistry")) {
-            return validateRegistryUniqueness(ruleExpression, dataNode);
+            return validateRegistryUniqueness(ruleExpression, data);
         } else {
-            return validateEquality(ruleExpression, dataNode);
+            return validateEquality(ruleExpression, data);
         }
     }
 
-    private boolean validateEquality(String ruleExpression, JsonNode dataNode) throws Exception {
+    private boolean validateEquality(String ruleExpression, JSONObject data) throws Exception {
         String[] parts = ruleExpression.split("==");
         if (parts.length != 2) {
             throw new IllegalArgumentException("Invalid equality rule format");
@@ -70,23 +77,23 @@ public class XValidationService {
             StringBuilder concatenated = new StringBuilder();
             for (String part : rightParts) {
                 String field = part.trim();
-                if (dataNode.has(field)) {
-                    concatenated.append(dataNode.get(field).asText());
+                if (data.has(field)) {
+                    concatenated.append(data.get(field));
                 } else {
                     throw new IllegalArgumentException("Field not found: " + field);
                 }
             }
             rightExpr = concatenated.toString();
-        } else if (dataNode.has(rightExpr)) {
+        } else if (data.has(rightExpr)) {
             // If right side is a field reference, get its value
-            rightExpr = dataNode.get(rightExpr).asText();
+            rightExpr = data.get(rightExpr).toString();
         }
 
-        String leftValue = dataNode.has(leftExpr) ? dataNode.get(leftExpr).asText() : "";
+        String leftValue = data.has(leftExpr) ? data.get(leftExpr).toString() : "";
         return leftValue.equals(rightExpr);
     }
 
-    private boolean validateRegistryExistence(String ruleExpression, JsonNode dataNode) throws Exception {
+    private boolean validateRegistryExistence(String ruleExpression, JSONObject data) throws Exception {
         // Parse rule: existsInRegistry('EntityType', 'field', valueField) or
         // existsInRegistry('EntityType', {'field1': value1, 'field2': value2})
         String[] parts = ruleExpression.split("'");
@@ -100,23 +107,23 @@ public class XValidationService {
         if (parts[2].contains("{")) {
             // Multiple fields case
             String conditionsStr = parts[2].substring(parts[2].indexOf('{') + 1, parts[2].lastIndexOf('}')).trim();
-            Map<String, String> conditions = parseConditions(conditionsStr, dataNode);
+            Map<String, String> conditions = parseConditions(conditionsStr, data);
             return registryLookup.exists(entityType, conditions);
         } else {
             // Single field case
             String field = parts[3];
             String valueField = parts[4].substring(1, parts[4].length() - 1).trim();
 
-            if (!dataNode.has(valueField)) {
+            if (!data.has(valueField)) {
                 throw new IllegalArgumentException("Field not found: " + valueField);
             }
 
-            String value = dataNode.get(valueField).asText();
+            String value = data.get(valueField).toString();
             return registryLookup.exists(entityType, field, value);
         }
     }
 
-    private boolean validateRegistryUniqueness(String ruleExpression, JsonNode dataNode) throws Exception {
+    private boolean validateRegistryUniqueness(String ruleExpression, JSONObject data) throws Exception {
         // Use regex to extract entity type and conditions map
         java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("^isUniqueInRegistry\\('([^']+)',\\s*\\{(.+)}\\)$");
         java.util.regex.Matcher matcher = pattern.matcher(ruleExpression);
@@ -125,11 +132,11 @@ public class XValidationService {
         }
         String entityType = matcher.group(1);
         String conditionsStr = matcher.group(2).trim();
-        Map<String, String> conditions = parseConditions(conditionsStr, dataNode);
+        Map<String, String> conditions = parseConditions(conditionsStr, data);
         return registryLookup.isUnique(entityType, conditions);
     }
 
-    private Map<String, String> parseConditions(String conditionsStr, JsonNode dataNode) throws Exception {
+    private Map<String, String> parseConditions(String conditionsStr, JSONObject data) throws Exception {
         Map<String, String> conditions = new HashMap<>();
         String[] conditionPairs = conditionsStr.split(",\\s*");  // Split by comma followed by optional whitespace
         for (String pair : conditionPairs) {
@@ -141,11 +148,11 @@ public class XValidationService {
             String field = keyValue[0].trim().replaceAll("'", "");
             String valueField = keyValue[1].trim();
 
-            if (!dataNode.has(valueField)) {
+            if (!data.has(valueField)) {
                 throw new IllegalArgumentException("Field not found: " + valueField);
             }
 
-            conditions.put(field, dataNode.get(valueField).asText());
+            conditions.put(field, data.get(valueField).toString());
         }
         return conditions;
     }

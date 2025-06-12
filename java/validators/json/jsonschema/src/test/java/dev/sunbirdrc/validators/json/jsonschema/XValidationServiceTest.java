@@ -8,6 +8,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.everit.json.schema.Schema;
+import org.everit.json.schema.loader.SchemaLoader;
+import org.json.JSONObject;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -45,8 +48,15 @@ class XValidationServiceTest {
                 "    \"name\": \"John Doe\"\n" +
                 "}";
 
+        Schema schemaObj = SchemaLoader.builder()
+                .schemaJson(new JSONObject(schema))
+                .build()
+                .load()
+                .build();
+        JSONObject dataObj = new JSONObject(data);
+
         // When
-        xValidationService.validate(objectMapper.readTree(schema), objectMapper.readTree(data));
+        xValidationService.validate(schemaObj, dataObj);
 
         // Then
         // No exception should be thrown
@@ -73,8 +83,15 @@ class XValidationServiceTest {
                 "    \"confirmPassword\": \"secret123\"\n" +
                 "}";
 
+        Schema schemaObj = SchemaLoader.builder()
+                .schemaJson(new JSONObject(schema))
+                .build()
+                .load()
+                .build();
+        JSONObject dataObj = new JSONObject(data);
+
         // When
-        xValidationService.validate(objectMapper.readTree(schema), objectMapper.readTree(data));
+        xValidationService.validate(schemaObj, dataObj);
 
         // Then
         // No exception should be thrown
@@ -101,9 +118,16 @@ class XValidationServiceTest {
                 "    \"confirmPassword\": \"different\"\n" +
                 "}";
 
+        Schema schemaObj = SchemaLoader.builder()
+                .schemaJson(new JSONObject(schema))
+                .build()
+                .load()
+                .build();
+        JSONObject dataObj = new JSONObject(data);
+
         // When & Then
         assertThrows(MiddlewareHaltException.class, () -> {
-            xValidationService.validate(objectMapper.readTree(schema), objectMapper.readTree(data));
+            xValidationService.validate(schemaObj, dataObj);
         });
     }
 
@@ -126,10 +150,17 @@ class XValidationServiceTest {
                 "    \"email\": \"test@example.com\"\n" +
                 "}";
 
+        Schema schemaObj = SchemaLoader.builder()
+                .schemaJson(new JSONObject(schema))
+                .build()
+                .load()
+                .build();
+        JSONObject dataObj = new JSONObject(data);
+
         when(registryLookup.exists(anyString(), anyString(), anyString())).thenReturn(true);
 
         // When
-        xValidationService.validate(objectMapper.readTree(schema), objectMapper.readTree(data));
+        xValidationService.validate(schemaObj, dataObj);
 
         // Then
         // No exception should be thrown
@@ -154,11 +185,18 @@ class XValidationServiceTest {
                 "    \"email\": \"nonexistent@example.com\"\n" +
                 "}";
 
+        Schema schemaObj = SchemaLoader.builder()
+                .schemaJson(new JSONObject(schema))
+                .build()
+                .load()
+                .build();
+        JSONObject dataObj = new JSONObject(data);
+
         when(registryLookup.exists(anyString(), anyString(), anyString())).thenReturn(false);
 
         // When & Then
         assertThrows(MiddlewareHaltException.class, () -> {
-            xValidationService.validate(objectMapper.readTree(schema), objectMapper.readTree(data));
+            xValidationService.validate(schemaObj, dataObj);
         });
     }
 
@@ -183,10 +221,17 @@ class XValidationServiceTest {
                 "    \"phone\": \"1234567890\"\n" +
                 "}";
 
+        Schema schemaObj = SchemaLoader.builder()
+                .schemaJson(new JSONObject(schema))
+                .build()
+                .load()
+                .build();
+        JSONObject dataObj = new JSONObject(data);
+
         when(registryLookup.isUnique(anyString(), any())).thenReturn(true);
 
         // When
-        xValidationService.validate(objectMapper.readTree(schema), objectMapper.readTree(data));
+        xValidationService.validate(schemaObj, dataObj);
 
         // Then
         // No exception should be thrown
@@ -213,11 +258,18 @@ class XValidationServiceTest {
                 "    \"phone\": \"1234567890\"\n" +
                 "}";
 
+        Schema schemaObj = SchemaLoader.builder()
+                .schemaJson(new JSONObject(schema))
+                .build()
+                .load()
+                .build();
+        JSONObject dataObj = new JSONObject(data);
+
         when(registryLookup.isUnique(anyString(), any())).thenReturn(false);
 
         // When & Then
         assertThrows(MiddlewareHaltException.class, () -> {
-            xValidationService.validate(objectMapper.readTree(schema), objectMapper.readTree(data));
+            xValidationService.validate(schemaObj, dataObj);
         });
     }
 
@@ -244,8 +296,15 @@ class XValidationServiceTest {
                 "    \"fullName\": \"JohnDoe\"\n" +
                 "}";
 
+        Schema schemaObj = SchemaLoader.builder()
+                .schemaJson(new JSONObject(schema))
+                .build()
+                .load()
+                .build();
+        JSONObject dataObj = new JSONObject(data);
+
         // When
-        xValidationService.validate(objectMapper.readTree(schema), objectMapper.readTree(data));
+        xValidationService.validate(schemaObj, dataObj);
 
         // Then
         // No exception should be thrown
