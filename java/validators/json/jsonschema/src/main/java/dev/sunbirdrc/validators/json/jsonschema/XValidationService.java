@@ -9,6 +9,7 @@ import org.json.JSONObject;
 import org.everit.json.schema.Schema;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.everit.json.schema.loader.SchemaLoader;
+import org.json.JSONArray;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -27,11 +28,12 @@ public class XValidationService {
     public void validate(Schema schema, JSONObject data) throws MiddlewareHaltException {
         // Get the raw schema JSON from the Schema object
         JSONObject schemaJson = new JSONObject(schema.toString());
-        if (!schemaJson.has("x-validation")) {
+        JSONObject osConfig = schemaJson.getJSONObject("_osConfig");
+        if (!osConfig.has("x-validation")) {
             return;
         }
 
-        JSONObject xValidationNode = schemaJson.getJSONObject("x-validation");
+        JSONObject xValidationNode = osConfig.getJSONObject("x-validation");
         Iterator<String> keys = xValidationNode.keys();
 
         while (keys.hasNext()) {
@@ -108,7 +110,22 @@ public class XValidationService {
             // Multiple fields case
             String conditionsStr = parts[2].substring(parts[2].indexOf('{') + 1, parts[2].lastIndexOf('}')).trim();
             Map<String, String> conditions = parseConditions(conditionsStr, data);
-            return registryLookup.exists(entityType, conditions);
+            
+            // Create a search query JSON for multiple fields
+            JSONObject searchQuery = new JSONObject();
+            searchQuery.put("entityType", new JSONArray().put(entityType));
+            
+            JSONObject filters = new JSONObject();
+            for (Map.Entry<String, String> entry : conditions.entrySet()) {
+                JSONObject fieldQuery = new JSONObject();
+                JSONObject eqOperator = new JSONObject();
+                eqOperator.put("eq", entry.getValue());
+                fieldQuery.put(entry.getKey(), eqOperator);
+                filters.put(entry.getKey(), fieldQuery);
+            }
+            searchQuery.put("filters", filters);
+            
+            return registryLookup.exists(searchQuery);
         } else {
             // Single field case
             String field = parts[3];
@@ -119,7 +136,20 @@ public class XValidationService {
             }
 
             String value = data.get(valueField).toString();
-            return registryLookup.exists(entityType, field, value);
+            
+            // Create a search query JSON for single field
+            JSONObject searchQuery = new JSONObject();
+            searchQuery.put("entityType", new JSONArray().put(entityType));
+            
+            JSONObject filters = new JSONObject();
+            JSONObject fieldQuery = new JSONObject();
+            JSONObject eqOperator = new JSONObject();
+            eqOperator.put("eq", value);
+            fieldQuery.put(field, eqOperator);
+            filters.put(field, fieldQuery);
+            searchQuery.put("filters", filters);
+            
+            return registryLookup.exists(searchQuery);
         }
     }
 

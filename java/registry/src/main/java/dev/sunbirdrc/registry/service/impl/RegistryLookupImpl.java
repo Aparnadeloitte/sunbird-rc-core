@@ -5,6 +5,9 @@ import dev.sunbirdrc.registry.service.RegistryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.json.JSONObject;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.Map;
 
@@ -12,9 +15,11 @@ import java.util.Map;
 public class RegistryLookupImpl implements RegistryLookup {
     private static final Logger logger = LoggerFactory.getLogger(RegistryLookupImpl.class);
     private final RegistryService registryService;
+    private final ObjectMapper objectMapper;
 
     public RegistryLookupImpl(RegistryService registryService) {
         this.registryService = registryService;
+        this.objectMapper = new ObjectMapper();
     }
 
     @Override
@@ -46,6 +51,19 @@ public class RegistryLookupImpl implements RegistryLookup {
         } catch (Exception e) {
             logger.error("Error checking existence in registry for entity type {} with field {} and value {}: {}", 
                 entityType, field, value, e.getMessage());
+            return false;
+        }
+    }
+
+    @Override
+    public boolean exists(JSONObject searchQuery) {
+        try {
+            // Convert JSONObject to JsonNode
+            JsonNode searchNode = objectMapper.readTree(searchQuery.toString());
+            return registryService.exists(searchNode);
+        } catch (Exception e) {
+            logger.error("Error checking existence in registry with search query {}: {}", 
+                searchQuery, e.getMessage());
             return false;
         }
     }

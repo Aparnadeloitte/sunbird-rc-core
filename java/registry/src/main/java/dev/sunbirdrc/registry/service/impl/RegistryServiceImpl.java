@@ -627,4 +627,13 @@ public class RegistryServiceImpl implements RegistryService {
         return exists(entityType, conditions);
     }
 
+    @Override
+    public boolean exists(JsonNode searchQuery) throws Exception {
+        JsonNode result = registryHelper.searchEntity(searchQuery, null);
+        String entityType = searchQuery.get(ENTITY_TYPE).get(0).asText();
+        return result != null && result.has(entityType) && 
+               result.get(entityType).has(ENTITY_LIST) &&
+               result.get(entityType).get(ENTITY_LIST).size() > 0;
+    }
+
 }

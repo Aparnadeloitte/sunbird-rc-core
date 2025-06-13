@@ -26,4 +26,5 @@ public interface RegistryService {
 	boolean exists(String entityType, Map<String, String> conditions) throws Exception;
 	boolean isUnique(String entityType, Map<String, String> conditions) throws Exception;
 	boolean exists(String entityType, String field, String value) throws Exception;
+	boolean exists(JsonNode searchQuery) throws Exception;
 }
