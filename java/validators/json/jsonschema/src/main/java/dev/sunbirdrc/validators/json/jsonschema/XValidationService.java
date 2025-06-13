@@ -96,35 +96,38 @@ public class XValidationService {
     }
 
     private boolean validateRegistryExistence(String ruleExpression, JSONObject data) throws Exception {
-        // Parse rule: existsInRegistry('EntityType', 'field', valueField) or
-        // existsInRegistry('EntityType', {'field1': value1, 'field2': value2})
         String[] parts = ruleExpression.split("'");
         if (parts.length < 3) {
             throw new IllegalArgumentException("Invalid registry existence rule format");
         }
 
         String entityType = parts[1];
-        
+
         // Check if it's a single field or multiple fields
-        if (parts[2].contains("{")) {
+        if (ruleExpression.contains("{")) {
             // Multiple fields case
-            String conditionsStr = parts[2].substring(parts[2].indexOf('{') + 1, parts[2].lastIndexOf('}')).trim();
+            int startIndex = ruleExpression.indexOf('{');
+            int endIndex = ruleExpression.lastIndexOf('}');
+            if (startIndex == -1 || endIndex == -1) {
+                throw new IllegalArgumentException("Invalid multiple fields format");
+            }
+
+            String conditionsStr = ruleExpression.substring(startIndex + 1, endIndex).trim();
             Map<String, String> conditions = parseConditions(conditionsStr, data);
-            
+
             // Create a search query JSON for multiple fields
             JSONObject searchQuery = new JSONObject();
             searchQuery.put("entityType", new JSONArray().put(entityType));
-            
+
             JSONObject filters = new JSONObject();
             for (Map.Entry<String, String> entry : conditions.entrySet()) {
-                JSONObject fieldQuery = new JSONObject();
                 JSONObject eqOperator = new JSONObject();
                 eqOperator.put("eq", entry.getValue());
-                fieldQuery.put(entry.getKey(), eqOperator);
-                filters.put(entry.getKey(), fieldQuery);
+                filters.put(entry.getKey(), eqOperator);
             }
             searchQuery.put("filters", filters);
-            
+
+            System.out.println("Search Query: " + searchQuery.toString());
             return registryLookup.exists(searchQuery);
         } else {
             // Single field case
@@ -136,19 +139,17 @@ public class XValidationService {
             }
 
             String value = data.get(valueField).toString();
-            
-            // Create a search query JSON for single field
+
             JSONObject searchQuery = new JSONObject();
             searchQuery.put("entityType", new JSONArray().put(entityType));
-            
+
             JSONObject filters = new JSONObject();
-            JSONObject fieldQuery = new JSONObject();
             JSONObject eqOperator = new JSONObject();
             eqOperator.put("eq", value);
-            fieldQuery.put(field, eqOperator);
-            filters.put(field, fieldQuery);
+            filters.put(field, eqOperator);
             searchQuery.put("filters", filters);
-            
+
+            System.out.println("Search Query: " + searchQuery.toString());
             return registryLookup.exists(searchQuery);
         }
     }
