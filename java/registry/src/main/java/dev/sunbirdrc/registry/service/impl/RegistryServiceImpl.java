@@ -592,33 +592,41 @@ public class RegistryServiceImpl implements RegistryService {
         ArrayNode entityArray = JsonNodeFactory.instance.arrayNode();
         entityArray.add(entityType);
         searchNode.set(ENTITY_TYPE, entityArray);
-        
+
         ObjectNode filters = JsonNodeFactory.instance.objectNode();
         conditions.forEach((key, value) -> filters.put(key, value));
         searchNode.set(FILTERS, filters);
 
         JsonNode result = registryHelper.searchEntity(searchNode, null);
-        return result != null && result.has(entityType) && 
-               result.get(entityType).has(ENTITY_LIST) &&
-               result.get(entityType).get(ENTITY_LIST).size() > 0;
+        return result != null && result.has(entityType) &&
+                result.get(entityType).has(ENTITY_LIST) &&
+                result.get(entityType).get(ENTITY_LIST).size() > 0;
     }
 
     @Override
     public boolean isUnique(String entityType, Map<String, String> conditions) throws Exception {
         ObjectNode searchNode = JsonNodeFactory.instance.objectNode();
-        ArrayNode entityArray = JsonNodeFactory.instance.arrayNode();
-        entityArray.add(entityType);
-        searchNode.set(ENTITY_TYPE, entityArray);
-        
+        searchNode.set("entityType", JsonNodeFactory.instance.arrayNode().add(entityType));
+
         ObjectNode filters = JsonNodeFactory.instance.objectNode();
-        conditions.forEach((key, value) -> filters.put(key, value));
-        searchNode.set(FILTERS, filters);
+        for (Map.Entry<String, String> e : conditions.entrySet()) {
+            filters.set(e.getKey(),
+                    JsonNodeFactory.instance.objectNode().put("eq", e.getValue()));
+        }
+        searchNode.set("filters", filters);
+        searchNode.put("limit", 1);
 
         JsonNode result = registryHelper.searchEntity(searchNode, null);
-        return result != null && result.has(entityType) && 
-               result.get(entityType).has(ENTITY_LIST) &&
-               result.get(entityType).get(ENTITY_LIST).size() == 0;
+        if (result != null && result.has(entityType)) {
+            JsonNode node = result.get(entityType);
+            if (node.has("data")) {
+                return node.get("data").size() == 0;
+            }
+            throw new RuntimeException("Invalid search response for uniqueness check");
+        }
+        throw new RuntimeException("Error running uniqueness search");
     }
+
 
     @Override
     public boolean exists(String entityType, String field, String value) throws Exception {
@@ -631,9 +639,9 @@ public class RegistryServiceImpl implements RegistryService {
     public boolean exists(JsonNode searchQuery) throws Exception {
         JsonNode result = registryHelper.searchEntity(searchQuery, null);
         String entityType = searchQuery.get(ENTITY_TYPE).get(0).asText();
-        return result != null && result.has(entityType) && 
-               result.get(entityType).has(ENTITY_LIST) &&
-               result.get(entityType).get(ENTITY_LIST).size() > 0;
+        return result != null && result.has(entityType) &&
+                result.get(entityType).has(ENTITY_LIST) &&
+                result.get(entityType).get(ENTITY_LIST).size() > 0;
     }
 
 }

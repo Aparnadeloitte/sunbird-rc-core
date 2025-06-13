@@ -103,9 +103,8 @@ public class XValidationService {
 
         String entityType = parts[1];
 
-        // Check if it's a single field or multiple fields
+
         if (ruleExpression.contains("{")) {
-            // Multiple fields case
             int startIndex = ruleExpression.indexOf('{');
             int endIndex = ruleExpression.lastIndexOf('}');
             if (startIndex == -1 || endIndex == -1) {
@@ -126,8 +125,6 @@ public class XValidationService {
                 filters.put(entry.getKey(), eqOperator);
             }
             searchQuery.put("filters", filters);
-
-            System.out.println("Search Query: " + searchQuery.toString());
             return registryLookup.exists(searchQuery);
         } else {
             // Single field case
@@ -137,9 +134,7 @@ public class XValidationService {
             if (!data.has(valueField)) {
                 throw new IllegalArgumentException("Field not found: " + valueField);
             }
-
             String value = data.get(valueField).toString();
-
             JSONObject searchQuery = new JSONObject();
             searchQuery.put("entityType", new JSONArray().put(entityType));
 
@@ -148,12 +143,9 @@ public class XValidationService {
             eqOperator.put("eq", value);
             filters.put(field, eqOperator);
             searchQuery.put("filters", filters);
-
-            System.out.println("Search Query: " + searchQuery.toString());
             return registryLookup.exists(searchQuery);
         }
     }
-
     private boolean validateRegistryUniqueness(String ruleExpression, JSONObject data) throws Exception {
         // Use regex to extract entity type and conditions map
         java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("^isUniqueInRegistry\\('([^']+)',\\s*\\{(.+)}\\)$");
@@ -187,4 +179,4 @@ public class XValidationService {
         }
         return conditions;
     }
-} 
+}
