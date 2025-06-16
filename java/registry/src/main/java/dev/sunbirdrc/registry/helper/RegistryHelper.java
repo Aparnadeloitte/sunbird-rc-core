@@ -106,6 +106,7 @@ public class RegistryHelper {
     private ShardManager shardManager;
 
     @Autowired
+    @Lazy
     RegistryService registryService;
 
     @Autowired
