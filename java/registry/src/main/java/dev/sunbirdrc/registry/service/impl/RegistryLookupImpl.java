@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.json.JSONObject;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.Map;
 
@@ -17,7 +18,7 @@ public class RegistryLookupImpl implements RegistryLookup {
     private final RegistryService registryService;
     private final ObjectMapper objectMapper;
 
-    public RegistryLookupImpl(RegistryService registryService) {
+    public RegistryLookupImpl(@Lazy RegistryService registryService) {
         this.registryService = registryService;
         this.objectMapper = new ObjectMapper();
     }
