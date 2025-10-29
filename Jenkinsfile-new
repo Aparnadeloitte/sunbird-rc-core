@@ -36,11 +36,11 @@ pipeline {
         stage('Push images') {
             steps {
                 script {
-                    withDockerRegistry([credentialsId: 'acr-admin-creds', usernameVariable: 'ACR_USER', passwordVariable: 'ACR_PASS']) {
+                    withDockerRegistry([credentialsId: 'acr-admin-creds']) {
                         app.push("${env.BUILD_NUMBER}")
                         app.push("latest")
                     }
-                    withDockerRegistry([credentialsId: 'acr-admin-creds', usernameVariable: 'ACR_USER', passwordVariable: 'ACR_PASS']) {
+                    withDockerRegistry([credentialsId: 'acr-admin-creds']) {
                         claimApp.push("${env.BUILD_NUMBER}")
                         claimApp.push("latest")
                     }
