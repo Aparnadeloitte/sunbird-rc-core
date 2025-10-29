@@ -8,11 +8,11 @@ pipeline {
     }
 
     stages {
-        stage('Clone repository') {
-            steps {
-                git branch: 'v2.0.0', url: 'https://github.com/Aparnadeloitte/sunbird-rc-core', credentialsId: 'irwinwilliams'
-            }
-        }
+        // stage('Clone repository') {
+        //     steps {
+        //         git branch: 'v2.0.0', url: 'https://github.com/Aparnadeloitte/sunbird-rc-core', credentialsId: 'irwinwilliams'
+        //     }
+        // }
 
         stage('Compile And Test') {
             steps {
