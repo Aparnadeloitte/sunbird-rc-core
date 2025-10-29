@@ -45,6 +45,35 @@ pipeline {
                 }
             }
         }
+
+        stage('Update Manifest Repo') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'githubpat2', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
+                        // Set the image variable to use in manifest
+                def manifestImage = "${DOCKER_IMAGE_BASE}/sunbird-rc-core:${env.BUILD_NUMBER}"
+                env.DOCKER_IMAGE = manifestImage
+
+                sh """
+                    rm -rf VerifyTT-DevOps
+                    git clone https://${GIT_USER}:${GIT_TOKEN}@github.com/iGovTT/VerifyTT-DevOps.git
+                    cd VerifyTT-DevOps
+                    git checkout ${MANIFEST_BRANCH}
+
+                    # Update the deployment yaml with the new image
+                    yq eval '.spec.template.spec.containers[0].image = "${manifestImage}"' -i registry/registry_read_deployment.yaml
+
+                    echo "Updated registry/registry_read_deployment.yaml:"
+                    cat registry/registry_read_deployment.yaml
+
+                    git add registry/registry_read_deployment.yaml
+                    git commit -m "Promote image ${manifestImage} to prod" || echo "No changes to commit"
+                    git push origin ${MANIFEST_BRANCH}
+                """
+                    }
+                }
+            }
+        }
     }
 
     post {
