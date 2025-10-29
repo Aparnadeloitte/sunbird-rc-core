@@ -36,11 +36,9 @@ pipeline {
         stage('Push images') {
             steps {
                 script {
-                    withDockerRegistry([credentialsId: 'acr-admin-creds']) {
+                    withDockerRegistry([credentialsId: 'acr-admin-creds', url: 'https://verifyttregistry.azurecr.io']) {
                         app.push("${env.BUILD_NUMBER}")
                         app.push("latest")
-                    }
-                    withDockerRegistry([credentialsId: 'acr-admin-creds']) {
                         claimApp.push("${env.BUILD_NUMBER}")
                         claimApp.push("latest")
                     }
