@@ -1,0 +1,58 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE_BASE = 'verifyttregistry.azurecr.io/registry'
+        MANIFEST_REPO = 'https://github.com/iGovTT/VerifyTT-DevOps.git'
+        MANIFEST_BRANCH = 'dev'
+    }
+
+    stages {
+        stage('Clone repository') {
+            steps {
+                git branch: 'v2.0.0', url: 'https://github.com/Aparnadeloitte/sunbird-rc-core'
+            }
+        }
+
+        stage('Compile And Test') {
+            steps {
+                sh 'sh configure-dependencies.sh'
+                sh 'make'
+                jacoco() // or your custom pattern if needed
+            }
+        }
+
+        stage('Build Images') {
+            steps {
+                script {
+                    app = docker.build("${DOCKER_IMAGE_BASE}/sunbird-rc-core", ".")
+                    claimApp = docker.build("${DOCKER_IMAGE_BASE}/sunbird-rc-claim-ms", "java/claim")
+                }
+            }
+        }
+
+        stage('Push images') {
+            steps {
+                script {
+                    withDockerRegistry([credentialsId: 'acr-admin-creds', usernameVariable: 'ACR_USER', passwordVariable: 'ACR_PASS']) {
+                        app.push("${env.BUILD_NUMBER}")
+                        app.push("latest")
+                    }
+                    withDockerRegistry([credentialsId: 'acr-admin-creds', usernameVariable: 'ACR_USER', passwordVariable: 'ACR_PASS']) {
+                        claimApp.push("${env.BUILD_NUMBER}")
+                        claimApp.push("latest")
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Pipeline completed successfully! Images pushed."
+        }
+        failure {
+            echo "Failed! Last attempted build."
+        }
+    }
+}
