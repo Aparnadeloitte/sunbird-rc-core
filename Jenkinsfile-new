@@ -27,7 +27,7 @@ pipeline {
         stage('Build Images') {
             steps {
                 script {
-                    app = docker.build("${DOCKER_IMAGE_BASE}/sunbird-rc-core", ".")
+                    app = docker.build("${DOCKER_IMAGE_BASE}/sunbird-rc-core", "target")
                     claimApp = docker.build("${DOCKER_IMAGE_BASE}/sunbird-rc-claim-ms", "java/claim")
                 }
             }
