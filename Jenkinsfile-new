@@ -5,6 +5,8 @@ pipeline {
         DOCKER_IMAGE_BASE = 'verifyttregistry.azurecr.io/registry'
         MANIFEST_REPO = 'https://github.com/iGovTT/VerifyTT-DevOps.git'
         MANIFEST_BRANCH = 'dev'
+        JAVA_HOME = '/usr/lib/jvm/java-11-openjdk-amd64'
+        PATH = "${JAVA_HOME}/bin:${env.PATH}"
     }
 
     stages {
