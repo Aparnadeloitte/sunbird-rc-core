@@ -67,7 +67,7 @@ pipeline {
                     cat registry/registry_read_deployment.yaml
 
                     git add registry/registry_read_deployment.yaml
-                    git commit -m "Promote image ${manifestImage} to prod" || echo "No changes to commit"
+                    git commit -m "Promote image ${manifestImage} to dev" || echo "No changes to commit"
                     git push origin ${MANIFEST_BRANCH}
                 """
                     }
