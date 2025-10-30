@@ -1,0 +1,81 @@
+pipeline {
+    agent any
+
+    environment { 
+        DOCKER_IMAGE_BASE = 'verifyttregistry.azurecr.io/registry'
+        MANIFEST_REPO = 'https://github.com/iGovTT/VerifyTT-DevOps.git'
+        MANIFEST_BRANCH = 'prod-new'
+    }
+
+    stages {
+        stage('Fetch Tags and Select Image') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'acr-admin-creds', usernameVariable: 'ACR_TOKEN_USER', passwordVariable: 'ACR_TOKEN_PASS')]) {
+        
+                        def tagJson = sh(
+                            script: """
+                                curl -s -u $ACR_TOKEN_USER:$ACR_TOKEN_PASS https://verifyttregistry.azurecr.io/v2/registry/sunbird-rc-core/tags/list
+                            """,
+                            returnStdout: true
+                        ).trim()
+        
+                        // 👇 Avoid import by fully qualifying the class name
+                        def parsed = new groovy.json.JsonSlurperClassic().parseText(tagJson)
+                        def tags = parsed.tags ?: []
+                        def tagList = tags.collect { it.toString() }
+        
+                        if (tagList.isEmpty()) {
+                            error "❌ No image tags found in ACR via REST API."
+                        }
+
+                        timeout(time: 5, unit: 'MINUTES') {
+                            def selectedTag = input(
+                                message: 'Select the image tag to deploy to Production:',
+                                parameters: [
+                                    choice(name: 'IMAGE_TAG', choices: tagList.sort().reverse().join('\n'), description: 'Available ACR image tags')
+                                ]
+                            )        
+                            env.IMAGE_TAG = selectedTag
+                            env.DOCKER_IMAGE = "${DOCKER_IMAGE_BASE}:${env.IMAGE_TAG}"
+                            echo "✅ Selected Image: ${env.DOCKER_IMAGE}"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Update Manifest Repo') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'githubpat2', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
+                        sh """
+                        rm -rf VerifyTT-DevOps
+                        git clone https://${GIT_USER}:${GIT_TOKEN}@github.com/iGovTT/VerifyTT-DevOps.git
+                        cd VerifyTT-DevOps
+                        git checkout ${MANIFEST_BRANCH}
+
+                        yq eval '.spec.template.spec.containers.0.image = "${env.DOCKER_IMAGE}"' -i registry/registry_read_deployment.yaml
+                        echo "Updated Deployment.yaml"
+                        cat registry/registry_read_deployment.yaml
+
+                        git add registry/registry_read_deployment.yaml
+                        git commit -m "Promote image ${env.DOCKER_IMAGE} to prod" || echo "No changes to commit"
+
+                        git push origin ${MANIFEST_BRANCH}
+                        """
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Image ${env.DOCKER_IMAGE} promoted to prod and updated in manifest repo."
+        }
+        failure {
+            echo "❌ Promotion failed for image: ${env.DOCKER_IMAGE}"
+        }
+    }
+}
