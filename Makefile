@@ -24,7 +24,7 @@ build: java/registry/target/registry.jar
 java/registry/target/registry.jar: $(SOURCES)
 	echo $(SOURCES)
 	sh configure-dependencies.sh
-	cd java && ./mvnw clean install -DskipTests
+	cd java && ./mvnw clean install -DskipTests -Dmaven.test.skip=true
 
 test: build
 	# @docker-compose -f docker-compose-v1.yml down
