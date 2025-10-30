@@ -20,7 +20,7 @@ pipeline {
             steps {
                 sh 'sh configure-dependencies.sh'
                 sh 'make'
-                jacoco() // or your custom pattern if needed
+                // jacoco() // or your custom pattern if needed
             }
         }
 
@@ -28,7 +28,7 @@ pipeline {
             steps {
                 script {
                     app = docker.build("${DOCKER_IMAGE_BASE}/sunbird-rc-core", "target")
-                    claimApp = docker.build("${DOCKER_IMAGE_BASE}/sunbird-rc-claim-ms", "java/claim")
+                    // claimApp = docker.build("${DOCKER_IMAGE_BASE}/sunbird-rc-claim-ms", "java/claim")
                 }
             }
         }
@@ -39,8 +39,8 @@ pipeline {
                     withDockerRegistry([credentialsId: 'acr-admin-creds', url: 'https://verifyttregistry.azurecr.io']) {
                         app.push("${env.BUILD_NUMBER}")
                         app.push("latest")
-                        claimApp.push("${env.BUILD_NUMBER}")
-                        claimApp.push("latest")
+                        // claimApp.push("${env.BUILD_NUMBER}")
+                        // claimApp.push("latest")
                     }
                 }
             }
@@ -84,4 +84,5 @@ pipeline {
             echo "Failed! Last attempted build."
         }
     }
+
 }
