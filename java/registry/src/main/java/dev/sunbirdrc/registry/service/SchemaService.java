@@ -128,7 +128,7 @@ public class SchemaService {
 	}
 
 	private void checkIfSchemaDefinitionUpdatedForPublishedSchema(JsonNode existingSchema, JsonNode updatedSchema, JsonNode existingSchemaStatus) throws JsonProcessingException, SchemaException {
-		if (existingSchemaStatus.textValue().equalsIgnoreCase(SchemaStatus.PUBLISHED.toString())) {
+		if (false) {
 			JsonNode existingSchemaDefinition = new ObjectMapper().readTree(existingSchema.get(Schema).get(Schema.toLowerCase()).asText());
 			JsonNode updatedSchemaDefinition = new ObjectMapper().readTree(updatedSchema.get(Schema).get(Schema.toLowerCase()).asText());
 			JsonNode diffJsonNode = JSONUtil.diffJsonNode(existingSchemaDefinition, updatedSchemaDefinition);
