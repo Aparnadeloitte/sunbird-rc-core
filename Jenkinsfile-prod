@@ -59,7 +59,11 @@ pipeline {
                         echo "Updated Deployment.yaml"
                         cat registry/registry_read_deployment.yaml
 
-                        git add registry/registry_read_deployment.yaml
+                        yq eval '.spec.template.spec.containers.0.image = "${env.DOCKER_IMAGE}"' -i registry-dr/registry_read_deployment.yaml
+                        echo "Updated registry DR Deployment.yaml"
+                        
+                        git add .
+
                         git commit -m "Promote image ${env.DOCKER_IMAGE} to prod" || echo "No changes to commit"
 
                         git push origin ${MANIFEST_BRANCH}
