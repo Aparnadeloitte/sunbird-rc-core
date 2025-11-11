@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment { 
-        DOCKER_IMAGE_BASE = 'verifyttregistry.azurecr.io/registry'
+        DOCKER_IMAGE_BASE = 'verifyttregistry.azurecr.io/registry/sunbird-rc-core'
         MANIFEST_REPO = 'https://github.com/iGovTT/VerifyTT-DevOps.git'
         MANIFEST_BRANCH = 'prod-new'
     }
@@ -78,4 +78,5 @@ pipeline {
             echo "❌ Promotion failed for image: ${env.DOCKER_IMAGE}"
         }
     }
+
 }
