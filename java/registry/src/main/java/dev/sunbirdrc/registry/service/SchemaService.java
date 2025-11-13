@@ -57,9 +57,9 @@ public class SchemaService {
 	private SchemaAuthFilter schemaAuthFilter;
 
 	public void deleteSchemaIfExists(Vertex vertex) throws SchemaException {
-		if (vertex.property(STATUS) != null && vertex.property(STATUS).value().equals(SchemaStatus.PUBLISHED.toString())) {
-			throw new SchemaException(NOT_ALLOWED_FOR_PUBLISHED_SCHEMA);
-		}
+		// if (vertex.property(STATUS) != null && vertex.property(STATUS).value().equals(SchemaStatus.PUBLISHED.toString())) {
+		// 	throw new SchemaException(NOT_ALLOWED_FOR_PUBLISHED_SCHEMA);
+		// }
 		JsonNode schema = JsonNodeFactory.instance.textNode(vertex.property(Schema.toLowerCase()).value().toString());
 		try {
 			String schemaName = getSchemaName(schema);
