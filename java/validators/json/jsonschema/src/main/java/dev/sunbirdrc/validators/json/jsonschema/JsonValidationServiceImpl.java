@@ -87,6 +87,7 @@ public class JsonValidationServiceImpl implements IValidate {
 			}
 		} else {
 			logger.warn("{} schema not found for validation", entityType);
+			throw new MiddlewareHaltException("Schema not found for " + entityType);
 		}
 	}
 
@@ -118,6 +119,7 @@ public class JsonValidationServiceImpl implements IValidate {
 	public void addDefinitions(JsonNode schema) throws IOException {
 		JsonNode schemaJsonNode = objectMapper.readTree(schema.asText("{}"));
 		String title = schemaJsonNode.get(TITLE).asText();
+		this.entitySchemaMap.remove(title);
 		this.addDefinitions(title, schema.asText("{}"));
 	}
 
@@ -137,6 +139,7 @@ public class JsonValidationServiceImpl implements IValidate {
 	public void removeDefinition(String schema) {
 		try {
 			definitionMap.remove(schema);
+			this.entitySchemaMap.remove(schema);
 		} catch (Exception e) {
 			logger.error("Failed removing schema from definition manager", e);
 		}
