@@ -22,6 +22,9 @@ import dev.sunbirdrc.registry.util.Definition;
 import dev.sunbirdrc.registry.util.IDefinitionsManager;
 import dev.sunbirdrc.registry.util.EntityParenter;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  *
  * Save audit details to DB system
@@ -44,6 +47,8 @@ public class AuditDBWriter {
     private EntityParenter entityParenter;
     @Value("${registry.expandReference}")
     private boolean expandReferenceObj;
+
+    private final Map<String, Boolean> indexCreationStatus = new ConcurrentHashMap<>();
 
     public String auditToDB(Shard shard, JsonNode rootNode, String entityType) throws AuditFailedException {
 
@@ -70,9 +75,14 @@ public class AuditDBWriter {
         }
         // Add indices: executes only once.
         String shardId = shard.getShardId();
-        Vertex parentVertex = entityParenter.getKnownParentVertex(entityType, shardId);
-        Definition definition = definitionsManager.getDefinition(entityType);
-        entityParenter.ensureIndexExists(dbProvider, parentVertex, definition, shardId);
+        String indexKey = entityType + "_" + shardId;
+
+        if (!indexCreationStatus.getOrDefault(indexKey, false)) {
+            Vertex parentVertex = entityParenter.getKnownParentVertex(entityType, shardId);
+            Definition definition = definitionsManager.getDefinition(entityType);
+            entityParenter.ensureIndexExists(dbProvider, parentVertex, definition, shardId);
+            indexCreationStatus.put(indexKey, true);
+        }
         return entityId;
 	}
 }

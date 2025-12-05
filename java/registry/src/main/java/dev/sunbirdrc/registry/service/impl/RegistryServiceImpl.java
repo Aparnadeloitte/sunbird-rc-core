@@ -46,6 +46,7 @@ import org.sunbird.akka.core.MessageProtos;
 import org.sunbird.akka.core.Router;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static dev.sunbirdrc.registry.Constants.*;
@@ -138,6 +139,8 @@ public class RegistryServiceImpl implements RegistryService {
 
     @Value("${registry.expandReference}")
     private boolean expandReferenceObj;
+
+    private final Map<String, Boolean> indexCreationStatus = new ConcurrentHashMap<>();
 
     /**
      * delete the vertex and changes the status
@@ -259,9 +262,14 @@ public class RegistryServiceImpl implements RegistryService {
             // Add indices: executes only once.
             if (perRequestIndexCreation) {
                 String shardId = shard.getShardId();
-                Vertex parentVertex = entityParenter.getKnownParentVertex(vertexLabel, shardId);
-                definition = definitionsManager.getDefinition(vertexLabel);
-                entityParenter.ensureIndexExists(dbProvider, parentVertex, definition, shardId);
+                String indexKey = vertexLabel + "_" + shardId;
+
+                if (!indexCreationStatus.getOrDefault(indexKey, false)) {
+                    Vertex parentVertex = entityParenter.getKnownParentVertex(vertexLabel, shardId);
+                    definition = definitionsManager.getDefinition(vertexLabel);
+                    entityParenter.ensureIndexExists(dbProvider, parentVertex, definition, shardId);
+                    indexCreationStatus.put(indexKey, true);
+                }
             }
 
             if (isElasticSearchEnabled()) {
